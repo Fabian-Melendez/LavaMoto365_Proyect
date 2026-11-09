@@ -1,0 +1,69 @@
+﻿
+@inherits LayoutComponentBase
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+
+<div class="page @(_isDarkMode ? "theme-dark" : "theme-light")">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <button class="theme-toggle"
+                    @onclick="ToggleTheme"
+                    disabled="@(!_isReady)">
+                @(_isDarkMode ? "☀️ Modo claro" : "🌙 Modo oscuro")
+            </button>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private IJSObjectReference? _themeModule;
+    private bool _isDarkMode;
+    private bool _isReady;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _themeModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./js/theme.js");
+
+            var theme = await _themeModule.InvokeAsync<string>("getTheme");
+
+            _isDarkMode = theme == "dark";
+            _isReady = true;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+
+        await _themeModule!.InvokeVoidAsync(
+            "setTheme", _isDarkMode ? "dark" : "light");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_themeModule is not null)
+        {
+            await _themeModule.DisposeAsync();
+        }
+    }
+}

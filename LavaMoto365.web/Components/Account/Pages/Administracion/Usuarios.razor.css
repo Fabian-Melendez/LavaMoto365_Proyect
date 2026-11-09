@@ -1,0 +1,56 @@
+﻿body {
+
+    .usuarios-page {
+        min-height: calc(100vh - 3.5rem);
+        padding: 1rem;
+        background-color: var(--background-color);
+        color: var(--text-color);
+    }
+
+        .usuarios-page h1,
+        .usuarios-page p {
+            color: var(--text-color);
+        }
+
+        .usuarios-page .table {
+            color: var(--text-color);
+            background-color: var(--surface-color);
+            border-color: var(--border-color);
+            margin-top: 1.5rem;
+        }
+
+            .usuarios-page .table thead th {
+                background-color: var(--surface-color);
+                color: var(--text-color);
+                border-color: var(--border-color);
+            }
+
+            .usuarios-page .table tbody td {
+                background-color: var(--background-color);
+                color: var(--text-color);
+                border-color: var(--border-color);
+            }
+
+        .usuarios-page .form-select {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .usuarios-page .alert {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .usuarios-page .btn-primary {
+            background-color: #0d6efd;
+            color: #ffffff;
+            border-color: #0d6efd;
+        }
+
+            .usuarios-page .btn-primary:hover {
+                background-color: #0b5ed7;
+                border-color: #0a58ca;
+            }
+}

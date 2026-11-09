@@ -1,0 +1,182 @@
+﻿
+@page "/administracion/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using LavaMoto365.web.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Administración de usuarios</PageTitle>
+
+<div class="usuarios-page">
+
+<h1>Administración de usuarios</h1>
+
+<p>Consulta y administra los roles de los usuarios registrados.</p>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info">@mensaje</div>
+}
+
+@if (usuarios == null)
+{
+    <p>Cargando usuarios...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Correo electrónico</th>
+                <th>Nombre de usuario</th>
+                <th>Rol actual</th>
+                <th>Nuevo rol</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var usuario in usuarios)
+            {
+                <tr>
+                    <td>@usuario.Email</td>
+                    <td>@usuario.UserName</td>
+                    <td>@string.Join(", ", usuario.Roles)</td>
+                    <td>
+                        <select class="form-select"
+                                @bind="usuario.RolSeleccionado"
+                                disabled="@(usuario.Id == idUsuarioActual)">
+                            @foreach (var rol in rolesDisponibles)
+                            {
+                                <option value="@rol">@rol</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        @if (usuario.Id == idUsuarioActual)
+                        {
+                            <span>Tu cuenta</span>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary btn-sm"
+                                    @onclick="() => CambiarRolAsync(usuario)">
+                                Guardar
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+</div>
+
+@code {
+    private string mensajePrueba = "";
+
+    private List<UsuarioViewModel>? usuarios;
+    private string mensaje = "";
+    private string? idUsuarioActual;
+
+    private readonly List<string> rolesDisponibles = new()
+    {
+        "Administrador",
+        "Empleado",
+        "Recepcionista"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var estado = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        idUsuarioActual = UserManager.GetUserId(estado.User);
+
+        usuarios = new List<UsuarioViewModel>();
+
+        var usuariosRegistrados = UserManager.Users.ToList();
+
+        foreach (var usuario in usuariosRegistrados)
+        {
+            var roles = await UserManager.GetRolesAsync(usuario);
+
+            usuarios.Add(new UsuarioViewModel
+            {
+                Id = usuario.Id,
+                Email = usuario.Email ?? "",
+                UserName = usuario.UserName ?? "",
+                Roles = roles.ToList(),
+                RolSeleccionado = roles.FirstOrDefault() ?? "Empleado"
+            });
+        }
+    }
+
+    private async Task CambiarRolAsync(UsuarioViewModel usuario)
+    {
+        var cuenta = await UserManager.FindByIdAsync(usuario.Id);
+
+        if (cuenta == null)
+        {
+            mensaje = "No se encontró el usuario.";
+            return;
+        }
+
+        if (!rolesDisponibles.Contains(usuario.RolSeleccionado))
+        {
+            mensaje = "El rol seleccionado no es válido.";
+            return;
+        }
+
+        var rolesActuales = await UserManager.GetRolesAsync(cuenta);
+
+        if (rolesActuales.Contains("Administrador") &&
+            usuario.RolSeleccionado != "Administrador")
+        {
+            var administradores = await UserManager.GetUsersInRoleAsync("Administrador");
+
+            if (administradores.Count <= 1)
+            {
+                mensaje = "No puedes quitar el rol al último administrador del sistema.";
+                return;
+            }
+        }
+
+        if (rolesActuales.Count > 0)
+        {
+            var resultadoEliminar = await UserManager.RemoveFromRolesAsync(
+                cuenta, rolesActuales);
+
+            if (!resultadoEliminar.Succeeded)
+            {
+                mensaje = "No se pudieron actualizar los roles.";
+                return;
+            }
+        }
+
+        var resultadoAgregar = await UserManager.AddToRoleAsync(
+            cuenta, usuario.RolSeleccionado);
+
+        if (!resultadoAgregar.Succeeded)
+        {
+            mensaje = "No se pudo asignar el nuevo rol.";
+            return;
+        }
+
+        usuario.Roles = new List<string> { usuario.RolSeleccionado };
+        mensaje = $"Rol actualizado correctamente para {usuario.Email}.";
+    }
+
+    private class UsuarioViewModel
+    {
+        public string Id { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public List<string> Roles { get; set; } = new();
+        public string RolSeleccionado { get; set; } = "Empleado";
+    }
+}
