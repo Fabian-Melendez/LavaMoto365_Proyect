@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LavaMoto36.Infrastructure\LavaMoto36.Infrastructure.csproj" />
+    <ProjectReference Include="..\LavaMoto36.Infrastructure\LavaMoto365.Infrastructure.csproj" />
     <ProjectReference Include="..\LavaMoto365.Domain\LavaMoto365.Domain.csproj" />
   </ItemGroup>
 
