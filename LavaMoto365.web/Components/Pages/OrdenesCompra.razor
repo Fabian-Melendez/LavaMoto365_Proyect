@@ -1,0 +1,261 @@
+@page "/ordenes-compra"
+@using LavaMoto365.Domain.Entities
+@using LavaMoto365.Domain.Exceptions
+@using LavaMoto365.Infrastructure.Services
+@inject OrdenCompraService OrdenesServicio
+@inject ProveedorService ProveedoresServicio
+@* Cuando el login esté listo: @attribute [Authorize]  (con @using Microsoft.AspNetCore.Authorization) *@
+
+<PageTitle>Órdenes de compra</PageTitle>
+
+<h1>Órdenes de compra</h1>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success")">@mensaje</div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Registrar Nueva Orden de Compra</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label fw-bold">Proveedor</label>
+            <select class="form-select" @bind="proveedorId">
+                <option value="0">Seleccione un proveedor...</option>
+                @foreach (var p in proveedoresActivos)
+                {
+                    <option value="@p.Id">@p.Nombre — Cupo disponible: @p.Presupuesto.ToString("C0")</option>
+                }
+            </select>
+        </div>
+
+        <hr />
+        <h6 class="text-secondary fw-bold mb-3">Seleccionar Repuestos o Insumos</h6>
+
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Repuesto / Servicio del Taller</label>
+                <select class="form-select" @onchange="OnCatalogoSeleccionado">
+                    <option value="">Seleccione un producto...</option>
+                    @foreach (var prod in catalogoProductos)
+                    {
+                        <option value="@prod.Nombre">@prod.Nombre — @prod.PrecioUnitario.ToString("C0")</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Cantidad</label>
+                <input type="number" class="form-control" min="1" @bind="cantidad" />
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-primary w-100" @onclick="AgregarLinea">Agregar a la orden</button>
+            </div>
+        </div>
+
+        @if (lineas.Count > 0)
+        {
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ítem / Repuesto</th>
+                            <th>Cant.</th>
+                            <th>Precio Unitario</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in lineas)
+                        {
+                            <tr>
+                                <td>@l.Descripcion</td>
+                                <td>@l.Cantidad</td>
+                                <td>@l.PrecioUnitario.ToString("C0")</td>
+                                <td>@((l.Cantidad * l.PrecioUnitario).ToString("C0"))</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => lineas.Remove(l)">Quitar</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <th colspan="3" class="text-end">Total de la Orden:</th>
+                            <th>@lineas.Sum(l => l.Cantidad * l.PrecioUnitario).ToString("C0")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+
+        <div class="text-end">
+            <button type="button" class="btn btn-primary px-4" @onclick="CrearOrdenAsync">Crear orden</button>
+        </div>
+    </div>
+</div>
+
+@if (ordenes is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th>Productos Solicitados</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var o in ordenes)
+            {
+                <tr>
+                    <td>@o.Id</td>
+                    <td>@o.Proveedor.Nombre</td>
+                    <td>@o.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var detalle in o.Detalles)
+                            {
+                                <li><small>• <strong>@detalle.Descripcion</strong> (Cant: @detalle.Cantidad)</small></li>
+                            }
+                        </ul>
+                    </td>
+                    <td>@o.Total.ToString("C0")</td>
+                    <td>
+                        @if (o.Estado == EstadoOrden.Pendiente)
+                        {
+                            <span class="badge bg-warning text-dark px-2 py-1">Pendiente</span>
+                        }
+                        else if (o.Estado == EstadoOrden.Aprobada)
+                        {
+                            <span class="badge bg-success px-2 py-1">Aprobada</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary px-2 py-1">@o.Estado</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-2">
+                            @if (o.Estado == EstadoOrden.Pendiente)
+                            {
+                                <button class="btn btn-sm btn-success px-3" @onclick="() => AprobarAsync(o.Id)">Aprobar</button>
+                                <button class="btn btn-sm btn-outline-danger px-3" @onclick="() => CancelarAsync(o.Id)">Cancelar</button>
+                            }
+                            else if (o.Estado == EstadoOrden.Aprobada)
+                            {
+                                <button class="btn btn-sm btn-outline-success px-3" @onclick="() => RecibirAsync(o.Id)">Marcar recibida</button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<OrdenDeCompra>? ordenes;
+    private List<Proveedor> proveedoresActivos = new();
+    private readonly List<Linea> lineas = new();
+
+    private int proveedorId;
+    private string descripcionSeleccionada = "";
+    private decimal precioSeleccionado = 0;
+    private int cantidad = 1;
+
+    private string? mensaje;
+    private bool esError;
+
+    private readonly List<ProductoCatalogo> catalogoProductos = new()
+    {
+        new("Aceite Sintético 4T 10W-40", 45000),
+        new("Kit de Arrastre Completo", 120000),
+        new("Pastillas de Freno Delanteras", 35000),
+        new("Filtro de Aceite", 18000),
+        new("Bujía de Iridio", 25000),
+        new("Llantas Sellomatic Trasera", 140000),
+        new("Kit de Llantas Delantera y Trasera", 260000)
+    };
+
+    private record Linea(string Descripcion, int Cantidad, decimal PrecioUnitario);
+    private record ProductoCatalogo(string Nombre, decimal PrecioUnitario);
+
+    protected override async Task OnInitializedAsync() => await RecargarAsync();
+
+    private async Task RecargarAsync()
+    {
+        ordenes = await OrdenesServicio.ListarAsync();
+        proveedoresActivos = await ProveedoresServicio.ListarAsync(soloActivos: true);
+    }
+
+    private void OnCatalogoSeleccionado(ChangeEventArgs e)
+    {
+        var nombre = e.Value?.ToString();
+        var producto = catalogoProductos.FirstOrDefault(p => p.Nombre == nombre);
+        if (producto != null)
+        {
+            descripcionSeleccionada = producto.Nombre;
+            precioSeleccionado = producto.PrecioUnitario;
+        }
+        else
+        {
+            descripcionSeleccionada = "";
+            precioSeleccionado = 0;
+        }
+    }
+
+    private void AgregarLinea()
+    {
+        if (string.IsNullOrWhiteSpace(descripcionSeleccionada)) { Notificar("Debe seleccionar un repuesto o servicio del catálogo", true); return; }
+        if (cantidad <= 0) { Notificar("La cantidad debe ser mayor que cero", true); return; }
+
+        lineas.Add(new Linea(descripcionSeleccionada, cantidad, precioSeleccionado));
+
+        descripcionSeleccionada = "";
+        precioSeleccionado = 0;
+        cantidad = 1;
+        mensaje = null;
+    }
+
+    private async Task CrearOrdenAsync()
+    {
+        if (proveedorId == 0) { Notificar("Debe seleccionar un proveedor para la orden", true); return; }
+        if (lineas.Count == 0) { Notificar("Debe agregar al menos un ítem a la orden", true); return; }
+
+        await Ejecutar(async () =>
+        {
+            await OrdenesServicio.CrearAsync(proveedorId, lineas.Select(l => (l.Descripcion, l.Cantidad, l.PrecioUnitario)));
+            lineas.Clear();
+            proveedorId = 0;
+        }, "Orden creada correctamente");
+    }
+
+    private Task AprobarAsync(int id) => Ejecutar(() => OrdenesServicio.AprobarAsync(id), "Orden aprobada y cupo de crédito descontado");
+    private Task CancelarAsync(int id) => Ejecutar(() => OrdenesServicio.CancelarAsync(id), "Orden cancelada");
+    private Task RecibirAsync(int id) => Ejecutar(() => OrdenesServicio.MarcarRecibidaAsync(id), "Orden marcada como recibida");
+
+    private async Task Ejecutar(Func<Task> accion, string exito)
+    {
+        try
+        {
+            await accion();
+            Notificar(exito, false);
+            await RecargarAsync();
+        }
+        catch (ReglaDeNegocioException ex) { Notificar(ex.Message, true); }
+    }
+
+    private void Notificar(string texto, bool error) { mensaje = texto; esError = error; }
+}

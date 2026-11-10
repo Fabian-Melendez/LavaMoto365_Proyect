@@ -1,0 +1,202 @@
+﻿@page "/empleados"
+@using System.ComponentModel.DataAnnotations
+@* Cuando el login esté listo: @attribute [Authorize] *@
+
+<PageTitle>Empleados</PageTitle>
+
+<h1>Gestión de Empleados</h1>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success")">@mensaje</div>
+}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Registrar Nuevo Empleado</h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="form" OnValidSubmit="GuardarAsync">
+            <DataAnnotationsValidator />
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Documento / Cédula</label>
+                    <InputText class="form-control" @bind-Value="form.Documento" placeholder="Ej: 1018456789" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Nombre Completo</label>
+                    <InputText class="form-control" @bind-Value="form.Nombre" placeholder="Ej: Carlos Pérez" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Cargo</label>
+                    <InputSelect class="form-select" @bind-Value="form.Cargo">
+                        <option value="">Seleccione un cargo...</option>
+                        <option value="Mecánico">Mecánico</option>
+                        <option value="Lavador">Lavador</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Recepcionista">Recepcionista</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Teléfono / Celular</label>
+                    <InputText class="form-control" @bind-Value="form.Telefono" placeholder="Ej: 3001234567" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha de Nacimiento</label>
+                    <InputDate class="form-control" @bind-Value="form.FechaNacimiento" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha de Ingreso</label>
+                    <InputDate class="form-control" @bind-Value="form.FechaIngreso" />
+                </div>
+            </div>
+
+            <div class="mt-3 text-end">
+                <button class="btn btn-primary px-4" type="submit">Registrar Empleado</button>
+            </div>
+
+            <ValidationSummary class="text-danger mt-2" />
+        </EditForm>
+    </div>
+</div>
+
+@if (empleados is null)
+{
+    <p>Cargando...</p>
+}
+else if (empleados.Count == 0)
+{
+    <p class="text-muted">No hay empleados registrados actualmente.</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Documento</th>
+                <th>Nombre</th>
+                <th>Cargo</th>
+                <th>Teléfono</th>
+                <th>F. Nacimiento</th>
+                <th>F. Ingreso</th>
+                <th>Estado</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in empleados)
+            {
+                <tr>
+                    <td>@emp.Documento</td>
+                    <td>@emp.Nombre</td>
+                    <td><span class="badge bg-info text-dark">@emp.Cargo</span></td>
+                    <td>@emp.Telefono</td>
+                    <td>@emp.FechaNacimiento.ToString("dd/MM/yyyy")</td>
+                    <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        @if (emp.EstaActivo)
+                        {
+                            <span class="badge bg-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactivo</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm @(emp.EstaActivo ? "btn-outline-danger" : "btn-outline-success")"
+                                @onclick="() => CambiarEstado(emp)">
+                            @(emp.EstaActivo ? "Desactivar" : "Reactivar")
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<EmpleadoViewModel>? empleados;
+    private FormularioEmpleado form = new();
+    private string? mensaje;
+    private bool esError;
+
+    protected override void OnInitialized()
+    {
+        // Lista inicial de prueba (conecta con tu servicio/BD cuando esté listo el backend)
+        empleados = new List<EmpleadoViewModel>
+        {
+            new() { Id = 1, Documento = "1018456789", Nombre = "Carlos Gómez", Cargo = "Mecánico", Telefono = "3105551234", FechaNacimiento = new DateTime(1995, 4, 15), FechaIngreso = new DateTime(2023, 1, 10), EstaActivo = true },
+            new() { Id = 2, Documento = "1020987654", Nombre = "Andrés López", Cargo = "Lavador", Telefono = "3204449876", FechaNacimiento = new DateTime(2000, 8, 22), FechaIngreso = new DateTime(2024, 3, 1), EstaActivo = true }
+        };
+    }
+
+    private void GuardarAsync()
+    {
+        if (form.FechaNacimiento > DateTime.Today.AddYears(-18))
+        {
+            Notificar("El empleado debe ser mayor de 18 años.", true);
+            return;
+        }
+
+        empleados?.Add(new EmpleadoViewModel
+        {
+            Id = (empleados.Max(e => (int?)e.Id) ?? 0) + 1,
+            Documento = form.Documento,
+            Nombre = form.Nombre,
+            Cargo = form.Cargo,
+            Telefono = form.Telefono,
+            FechaNacimiento = form.FechaNacimiento,
+            FechaIngreso = form.FechaIngreso,
+            EstaActivo = true
+        });
+
+        Notificar("Empleado registrado correctamente", false);
+        form = new();
+    }
+
+    private void CambiarEstado(EmpleadoViewModel emp)
+    {
+        emp.EstaActivo = !emp.EstaActivo;
+        Notificar($"Estado de {emp.Nombre} actualizado.", false);
+    }
+
+    private void Notificar(string texto, bool error)
+    {
+        mensaje = texto;
+        esError = error;
+    }
+
+    private class FormularioEmpleado
+    {
+        [Required(ErrorMessage = "El documento es obligatorio")]
+        public string Documento { get; set; } = "";
+
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string Nombre { get; set; } = "";
+
+        [Required(ErrorMessage = "El cargo es obligatorio")]
+        public string Cargo { get; set; } = "";
+
+        [Required(ErrorMessage = "El teléfono es obligatorio")]
+        public string Telefono { get; set; } = "";
+
+        [Required(ErrorMessage = "La fecha de nacimiento es obligatoria")]
+        public DateTime FechaNacimiento { get; set; } = DateTime.Today.AddYears(-20);
+
+        [Required(ErrorMessage = "La fecha de ingreso es obligatoria")]
+        public DateTime FechaIngreso { get; set; } = DateTime.Today;
+    }
+
+    private class EmpleadoViewModel
+    {
+        public int Id { get; set; }
+        public string Documento { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public string Cargo { get; set; } = "";
+        public string Telefono { get; set; } = "";
+        public DateTime FechaNacimiento { get; set; }
+        public DateTime FechaIngreso { get; set; }
+        public bool EstaActivo { get; set; }
+    }
+}

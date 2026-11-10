@@ -4,6 +4,7 @@ using LavaMoto365.web.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using LavaMoto365.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+builder.Services.AddLavaMotoInfrastructure(
+    builder.Configuration.GetConnectionString("DefaultConnection")!);
 
 var app = builder.Build();
 
