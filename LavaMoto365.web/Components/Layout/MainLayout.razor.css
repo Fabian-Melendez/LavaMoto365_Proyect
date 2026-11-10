@@ -6,24 +6,22 @@
 
 main {
     flex: 1;
+    min-width: 0; /* evita que tablas anchas desborden el contenido principal */
 }
 
+/* ---------- Menu lateral ---------- */
 
 .sidebar {
-    background-image: linear-gradient(180deg, #052767 0%, #3a0647 70%);
-    color: #ffffff;
+    background: var(--lm-sidebar-bg);
+    color: var(--lm-sidebar-text);
 }
 
-.theme-dark .sidebar {
-    background-image: none;
-    background-color: #1c2028;
-    border-right: 1px solid #424752;
-}
-
+/* ---------- Encabezado superior ---------- */
 
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    background-color: var(--lm-topbar-bg);
+    color: var(--lm-text);
+    border-bottom: 1px solid var(--lm-border);
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
@@ -65,6 +63,7 @@ main {
         height: 100vh;
         position: sticky;
         top: 0;
+        border-right: 1px solid var(--lm-sidebar-border);
     }
 
     .top-row {
@@ -85,9 +84,11 @@ main {
     }
 }
 
+/* ---------- Barra de errores de Blazor ---------- */
+
 #blazor-error-ui {
-    color-scheme: light only;
-    background: lightyellow;
+    background: var(--lm-warning-bg);
+    color: var(--lm-warning-text);
     bottom: 0;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
@@ -98,6 +99,11 @@ main {
     width: 100%;
     z-index: 1000;
 }
+
+    #blazor-error-ui a {
+        color: inherit;
+        text-decoration: underline;
+    }
 
     #blazor-error-ui .dismiss {
         cursor: pointer;

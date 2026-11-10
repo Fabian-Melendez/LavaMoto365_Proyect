@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
 
-    <script>
-        const savedTheme = localStorage.getItem("lavaMoto365-theme") || "light";
-        document.documentElement.setAttribute("data-theme", savedTheme);
-    </script>
+    <meta name="color-scheme" content="light dark" />
+
+    @* Debe cargarse de forma sincrona en <head>: aplica el tema guardado antes del primer pintado. *@
+    <script src="@Assets["js/theme.js"]"></script>
 
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
@@ -21,16 +21,6 @@
 
 <body>
     <Routes @rendermode="PageRenderMode" />
-
-    <script>
-        const theme = localStorage.getItem("lavaMoto365-theme") || "light";
-        const page = document.querySelector(".page");
-
-        if (page) {
-            page.classList.remove("theme-light", "theme-dark");
-            page.classList.add("theme-" + theme);
-        }
-    </script>
 
     <script src="_framework/blazor.web.js"></script>
 </body>

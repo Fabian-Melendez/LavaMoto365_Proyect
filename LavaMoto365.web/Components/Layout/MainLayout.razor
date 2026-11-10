@@ -1,20 +1,21 @@
-﻿
-@inherits LayoutComponentBase
-@implements IAsyncDisposable
+﻿@inherits LayoutComponentBase
 
-@inject IJSRuntime JS
-
-<div class="page @(_isDarkMode ? "theme-dark" : "theme-light")">
+<div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <button class="theme-toggle"
-                    @onclick="ToggleTheme"
-                    disabled="@(!_isReady)">
-                @(_isDarkMode ? "☀️ Modo claro" : "🌙 Modo oscuro")
+            @* El cambio de tema lo gestiona wwwroot/js/theme.js (sin JS interop), por lo que
+               funciona tambien en las paginas con renderizado estatico (Login, Register, etc.). *@
+            <button type="button"
+                    class="theme-toggle"
+                    data-theme-toggle
+                    aria-pressed="false"
+                    title="Cambiar entre modo claro y modo oscuro">
+                <span class="theme-toggle__label--light">🌙 Modo oscuro</span>
+                <span class="theme-toggle__label--dark">☀️ Modo claro</span>
             </button>
         </div>
 
@@ -29,41 +30,3 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
-
-@code {
-    private IJSObjectReference? _themeModule;
-    private bool _isDarkMode;
-    private bool _isReady;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _themeModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import", "./js/theme.js");
-
-            var theme = await _themeModule.InvokeAsync<string>("getTheme");
-
-            _isDarkMode = theme == "dark";
-            _isReady = true;
-
-            StateHasChanged();
-        }
-    }
-
-    private async Task ToggleTheme()
-    {
-        _isDarkMode = !_isDarkMode;
-
-        await _themeModule!.InvokeVoidAsync(
-            "setTheme", _isDarkMode ? "dark" : "light");
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_themeModule is not null)
-        {
-            await _themeModule.DisposeAsync();
-        }
-    }
-}

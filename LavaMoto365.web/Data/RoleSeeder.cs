@@ -43,8 +43,7 @@ namespace LavaMoto365.web.Data
 
             if (adminUser == null)
             {
-                throw new Exception(
-                    "No se encontró la cuenta inicial de administrador.");
+                return; // aún no existe; se registra y se reinicia la app
             }
 
             if (!await userManager.IsInRoleAsync(

@@ -1,56 +1,55 @@
-﻿body {
+﻿/* Administracion de usuarios.
+   Solo consume las variables globales --lm-* (ver wwwroot/app.css); no define colores propios. */
 
-    .usuarios-page {
-        min-height: calc(100vh - 3.5rem);
-        padding: 1rem;
-        background-color: var(--background-color);
-        color: var(--text-color);
+.usuarios-page {
+    padding: 1rem;
+    color: var(--lm-text);
+}
+
+    .usuarios-page h1,
+    .usuarios-page p {
+        color: var(--lm-text);
     }
 
-        .usuarios-page h1,
-        .usuarios-page p {
-            color: var(--text-color);
-        }
+.usuarios-table {
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+    --bs-table-color: var(--lm-text);
+    --bs-table-bg: var(--lm-bg);
+    --bs-table-border-color: var(--lm-border);
+    --bs-table-hover-color: var(--lm-text);
+    --bs-table-hover-bg: var(--lm-surface);
+    border-color: var(--lm-border);
+}
 
-        .usuarios-page .table {
-            color: var(--text-color);
-            background-color: var(--surface-color);
-            border-color: var(--border-color);
-            margin-top: 1.5rem;
-        }
+    .usuarios-table thead {
+        --bs-table-bg: var(--lm-surface-2);
+        --bs-table-color: var(--lm-text);
+        --bs-table-hover-bg: var(--lm-surface-2);
+    }
 
-            .usuarios-page .table thead th {
-                background-color: var(--surface-color);
-                color: var(--text-color);
-                border-color: var(--border-color);
-            }
+    .usuarios-table thead th {
+        border-bottom: 2px solid var(--lm-border);
+        white-space: nowrap;
+    }
 
-            .usuarios-page .table tbody td {
-                background-color: var(--background-color);
-                color: var(--text-color);
-                border-color: var(--border-color);
-            }
+    .usuarios-table tbody td {
+        border-color: var(--lm-border);
+    }
 
-        .usuarios-page .form-select {
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border-color: var(--border-color);
-        }
+    .usuarios-table > tbody > tr:last-child > td {
+        border-bottom-width: 0;
+    }
 
-        .usuarios-page .alert {
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border-color: var(--border-color);
-        }
+    .usuarios-table .form-select {
+        min-width: 11rem;
+    }
 
-        .usuarios-page .btn-primary {
-            background-color: #0d6efd;
-            color: #ffffff;
-            border-color: #0d6efd;
-        }
+    .usuarios-table .form-select:disabled {
+        cursor: not-allowed;
+    }
 
-            .usuarios-page .btn-primary:hover {
-                background-color: #0b5ed7;
-                border-color: #0a58ca;
-            }
+.usuarios-page .table-responsive {
+    border: 1px solid var(--lm-border);
+    border-radius: 0.5rem;
 }

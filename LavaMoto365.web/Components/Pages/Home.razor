@@ -1,10 +1,8 @@
-﻿@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize(Roles = "Administrador")]
-@page "/"
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
+<PageTitle>Inicio</PageTitle>
 
-<PageTitle>Home</PageTitle>
-
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<h1>LavaMoto365</h1>
+<p>Bienvenido al sistema de gestión de LavaMoto365.</p>

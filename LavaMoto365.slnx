@@ -1,5 +1,8 @@
 <Solution>
-  <Project Path="LavaMoto36.Infrastructure/LavaMoto36.Infrastructure.csproj" />
+  <Folder Name="/Elementos de la solución/">
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="LavaMoto36.Infrastructure/LavaMoto365.Infrastructure.csproj" />
   <Project Path="LavaMoto365.Domain/LavaMoto365.Domain.csproj" />
   <Project Path="LavaMoto365.Tests/LavaMoto365.Tests.csproj" />
   <Project Path="LavaMoto365.web/LavaMoto365.web.csproj" />

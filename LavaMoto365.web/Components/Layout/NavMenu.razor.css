@@ -27,6 +27,8 @@
 .top-row {
     min-height: 3.5rem;
     background-color: rgba(0, 0, 0, 0.4);
+    border-bottom: 0;
+    color: #ffffff;
 }
 
 .navbar-brand {
@@ -98,10 +100,10 @@
         padding-bottom: 1rem;
     }
 
-    /* Enlaces: texto blanco en ambos temas */
+    /* Enlaces: el menu lateral es oscuro en ambos temas, por eso usa --lm-sidebar-text */
 
     .nav-item ::deep .nav-link {
-        color: #e4e6eb;
+        color: var(--lm-sidebar-text);
         background: transparent;
         border: none;
         border-radius: 6px;
