@@ -1,0 +1,341 @@
+@page "/inventario"
+@using System.ComponentModel.DataAnnotations
+@using LavaMoto365.Domain.Entities
+@using LavaMoto365.Domain.Exceptions
+@using LavaMoto365.Infrastructure.Services
+@inject InventarioService Servicio
+@* Cuando el login esté listo: @attribute [Authorize]  (con @using Microsoft.AspNetCore.Authorization) *@
+
+<PageTitle>Inventario y Almacén</PageTitle>
+
+<h1 class="mb-1">Inventario y Almacén</h1>
+<p class="text-muted">
+    Aquí controlas los productos, la materia prima y los insumos del lavadero (shampoo, cera, repuestos, etc.).
+</p>
+
+<div class="alert alert-info">
+    <strong>¿Cómo se usa esta página?</strong>
+    <ol class="mb-0 mt-1">
+        <li><strong>Registra</strong> cada producto una sola vez (paso 1).</li>
+        <li>Cada vez que llegue mercancía o se gaste, registra una <strong>entrada</strong> o una <strong>salida</strong> (paso 2).</li>
+        <li>Consulta cuánto hay disponible en la tabla de <strong>existencias</strong> (paso 3).</li>
+    </ol>
+</div>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @(esError ? "alert-danger" : "alert-success") d-flex justify-content-between align-items-center" role="alert">
+        <span>@(esError ? "⚠ " : "✔ ")@mensaje</span>
+        <button type="button" class="btn-close" aria-label="Cerrar mensaje" @onclick="() => mensaje = null"></button>
+    </div>
+}
+
+@* ===================== PASO 1: REGISTRAR PRODUCTO ===================== *@
+<div class="card mb-4">
+    <div class="card-header fw-semibold">1. Registrar un producto nuevo</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Hazlo una sola vez por producto. Los campos con <span class="text-danger">*</span> son obligatorios.
+            Para sumar o restar unidades después, usa el paso 2.
+        </p>
+
+        <EditForm Model="form" OnValidSubmit="RegistrarAsync">
+            <DataAnnotationsValidator />
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                    <InputText id="codigo" class="form-control" @bind-Value="form.Codigo" placeholder="Ej. SHA-001" />
+                    <div class="form-text">Identificador único. No se puede repetir.</div>
+                    <ValidationMessage For="() => form.Codigo" />
+                </div>
+
+                <div class="col-md-5">
+                    <label for="nombre" class="form-label">Nombre del producto <span class="text-danger">*</span></label>
+                    <InputText id="nombre" class="form-control" @bind-Value="form.Nombre" placeholder="Ej. Shampoo para motos" />
+                    <div class="form-text">Cómo se llama el producto.</div>
+                    <ValidationMessage For="() => form.Nombre" />
+                </div>
+
+                <div class="col-md-4">
+                    <label for="categoria" class="form-label">Categoría <span class="text-danger">*</span></label>
+                    <InputText id="categoria" class="form-control" @bind-Value="form.Categoria" list="categorias" placeholder="Ej. Limpieza" />
+                    <datalist id="categorias">
+                        <option value="Limpieza"></option>
+                        <option value="Químicos"></option>
+                        <option value="Herramientas"></option>
+                        <option value="Repuestos"></option>
+                        <option value="Papelería"></option>
+                    </datalist>
+                    <div class="form-text">Elige una de la lista o escribe la tuya.</div>
+                    <ValidationMessage For="() => form.Categoria" />
+                </div>
+
+                <div class="col-md-3">
+                    <label for="unidad" class="form-label">Unidad de medida</label>
+                    <InputSelect id="unidad" class="form-select" @bind-Value="form.Unidad">
+                        @foreach (var u in unidades)
+                        {
+                            <option value="@u.Valor">@u.Texto</option>
+                        }
+                    </InputSelect>
+                    <div class="form-text">Con qué se cuenta este producto.</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="stock" class="form-label">Stock inicial</label>
+                    <InputNumber id="stock" class="form-control" @bind-Value="form.Stock" />
+                    <div class="form-text">Cuántas unidades tienes hoy. Puede ser 0.</div>
+                    <ValidationMessage For="() => form.Stock" />
+                </div>
+
+                <div class="col-md-6 d-flex align-items-end justify-content-end">
+                    <button type="submit" class="btn btn-primary">Registrar producto</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@* ===================== PASO 2: MOVIMIENTO ===================== *@
+<div class="card mb-4">
+    <div class="card-header fw-semibold">2. Registrar una entrada o una salida de stock</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            <strong>Entrada:</strong> llegó mercancía o compraste más.
+            <strong>Salida:</strong> se usó o se retiró producto del almacén.
+        </p>
+
+        @if (insumos is not null && insumos.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">Primero registra al menos un producto en el paso 1.</div>
+        }
+        else
+        {
+            <EditForm Model="mov" OnValidSubmit="MoverAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="producto" class="form-label">Producto <span class="text-danger">*</span></label>
+                        <InputSelect id="producto" class="form-select" @bind-Value="mov.InsumoId">
+                            <option value="0">— Seleccione un producto —</option>
+                            @foreach (var i in insumos ?? new())
+                            {
+                                <option value="@i.Id">@i.Codigo — @i.Nombre</option>
+                            }
+                        </InputSelect>
+                        @if (Seleccionado is not null)
+                        {
+                            <div class="form-text">Stock actual: <strong>@Seleccionado.Stock @Seleccionado.UnidadMedida</strong></div>
+                        }
+                        <ValidationMessage For="() => mov.InsumoId" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="tipo" class="form-label">Tipo de movimiento <span class="text-danger">*</span></label>
+                        <InputSelect id="tipo" class="form-select" @bind-Value="mov.Tipo">
+                            <option value="@TipoMovimiento.Entrada">Entrada (suma al stock)</option>
+                            <option value="@TipoMovimiento.Salida">Salida (resta del stock)</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="cantidad" class="form-label">Cantidad <span class="text-danger">*</span></label>
+                        <InputNumber id="cantidad" class="form-control" @bind-Value="mov.Cantidad" />
+                        <ValidationMessage For="() => mov.Cantidad" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="motivo" class="form-label">Motivo <span class="text-muted">(opcional)</span></label>
+                        <InputText id="motivo" class="form-control" @bind-Value="mov.Motivo" placeholder="Ej. Lavado de motos" />
+                        <ValidationMessage For="() => mov.Motivo" />
+                    </div>
+
+                    @if (mov.Tipo == TipoMovimiento.Salida && Seleccionado is not null && mov.Cantidad > Seleccionado.Stock)
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-warning mb-0">
+                                Solo hay <strong>@Seleccionado.Stock @Seleccionado.UnidadMedida</strong> disponibles; no se puede retirar @mov.Cantidad.
+                            </div>
+                        </div>
+                    }
+
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn @(mov.Tipo == TipoMovimiento.Entrada ? "btn-success" : "btn-danger")">
+                            Registrar @(mov.Tipo == TipoMovimiento.Entrada ? "entrada" : "salida")
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@* ===================== PASO 3: EXISTENCIAS ===================== *@
+<div class="card mb-4">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-semibold">3. Existencias (lo que hay en el almacén)</span>
+        <input class="form-control form-control-sm w-auto" style="min-width: 240px;"
+               placeholder="Buscar por código o nombre..." @bind="filtro" @bind:event="oninput" />
+    </div>
+    <div class="card-body">
+        @if (insumos is null)
+        {
+            <p class="mb-0">Cargando...</p>
+        }
+        else if (insumos.Count == 0)
+        {
+            <p class="text-muted mb-0">Todavía no hay productos registrados.</p>
+        }
+        else if (!InsumosFiltrados.Any())
+        {
+            <p class="text-muted mb-0">Ningún producto coincide con la búsqueda.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Stock</th><th>Estado</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in InsumosFiltrados)
+                    {
+                        <tr>
+                            <td>@i.Codigo</td>
+                            <td>@i.Nombre</td>
+                            <td>@i.Categoria</td>
+                            <td>@i.Stock @i.UnidadMedida</td>
+                            <td>
+                                @if (i.Stock == 0)
+                                {
+                                    <span class="badge bg-danger">Agotado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Disponible</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@* ===================== HISTORIAL ===================== *@
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Últimos movimientos</div>
+    <div class="card-body">
+        @if (movimientos is null || movimientos.Count == 0)
+        {
+            <p class="text-muted mb-0">Aún no hay movimientos registrados.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock quedó en</th><th>Motivo</th></tr></thead>
+                    <tbody>
+                    @foreach (var m in movimientos)
+                    {
+                        <tr>
+                            <td>@m.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@m.Insumo.Codigo — @m.Insumo.Nombre</td>
+                            <td>
+                                <span class="badge @(m.Tipo == TipoMovimiento.Entrada ? "bg-success" : "bg-danger")">
+                                    @(m.Tipo == TipoMovimiento.Entrada ? "▲ Entrada" : "▼ Salida")
+                                </span>
+                            </td>
+                            <td>@m.Cantidad</td>
+                            <td>@m.StockResultante</td>
+                            <td>@m.Motivo</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Insumo>? insumos;
+    private List<MovimientoInventario>? movimientos;
+    private FormularioInsumo form = new();
+    private FormularioMovimiento mov = new();
+    private string filtro = "";
+    private string? mensaje;
+    private bool esError;
+
+    private static readonly (string Valor, string Texto)[] unidades =
+    {
+        ("und", "Unidades (und)"),
+        ("kg", "Kilogramos (kg)"),
+        ("litros", "Litros"),
+        ("galones", "Galones"),
+        ("cajas", "Cajas"),
+        ("metros", "Metros")
+    };
+
+    private Insumo? Seleccionado => insumos?.FirstOrDefault(i => i.Id == mov.InsumoId);
+
+    private IEnumerable<Insumo> InsumosFiltrados =>
+        (insumos ?? new()).Where(i =>
+            string.IsNullOrWhiteSpace(filtro) ||
+            i.Codigo.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
+            i.Nombre.Contains(filtro, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await RecargarAsync();
+
+    private async Task RecargarAsync()
+    {
+        insumos = await Servicio.ListarAsync();
+        movimientos = await Servicio.ListarMovimientosAsync();
+    }
+
+    private async Task RegistrarAsync()
+    {
+        try
+        {
+            await Servicio.RegistrarAsync(form.Codigo, form.Nombre, form.Categoria, form.Stock, form.Unidad);
+            Notificar($"Producto \"{form.Nombre}\" registrado correctamente", false);
+            form = new();
+            await RecargarAsync();
+        }
+        catch (ReglaDeNegocioException ex) { Notificar(ex.Message, true); }
+    }
+
+    private async Task MoverAsync()
+    {
+        try
+        {
+            var nombre = Seleccionado?.Nombre ?? "producto";
+            if (mov.Tipo == TipoMovimiento.Entrada) await Servicio.IngresarAsync(mov.InsumoId, mov.Cantidad, mov.Motivo);
+            else await Servicio.RetirarAsync(mov.InsumoId, mov.Cantidad, mov.Motivo);
+
+            Notificar($"{(mov.Tipo == TipoMovimiento.Entrada ? "Entrada" : "Salida")} de {mov.Cantidad} registrada para \"{nombre}\"", false);
+            mov = new FormularioMovimiento { InsumoId = mov.InsumoId, Tipo = mov.Tipo };
+            await RecargarAsync();
+        }
+        catch (ReglaDeNegocioException ex) { Notificar(ex.Message, true); }
+    }
+
+    private void Notificar(string texto, bool error) { mensaje = texto; esError = error; }
+
+    private class FormularioInsumo
+    {
+        [Required(ErrorMessage = "Escribe el código del producto")] public string Codigo { get; set; } = "";
+        [Required(ErrorMessage = "Escribe el nombre del producto")] public string Nombre { get; set; } = "";
+        [Required(ErrorMessage = "Elige o escribe una categoría")] public string Categoria { get; set; } = "";
+        public string Unidad { get; set; } = "und";
+        [Range(0, int.MaxValue, ErrorMessage = "El stock inicial debe ser 0 o más")] public int Stock { get; set; }
+    }
+
+    private class FormularioMovimiento
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Seleccione un producto")] public int InsumoId { get; set; }
+        public TipoMovimiento Tipo { get; set; } = TipoMovimiento.Entrada;
+        [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor que cero")] public int Cantidad { get; set; } = 1;
+        [StringLength(200, ErrorMessage = "El motivo es demasiado largo (máximo 200 caracteres)")] public string? Motivo { get; set; }
+    }
+}

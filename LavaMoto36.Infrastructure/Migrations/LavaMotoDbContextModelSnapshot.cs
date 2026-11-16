@@ -52,6 +52,82 @@ namespace LavaMoto365.Infrastructure.Migrations
                     b.ToTable("DetallesOrden", (string)null);
                 });
 
+            modelBuilder.Entity("LavaMoto365.Domain.Entities.Insumo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UnidadMedida")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("Insumos", (string)null);
+                });
+
+            modelBuilder.Entity("LavaMoto365.Domain.Entities.MovimientoInventario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InsumoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("StockResultante")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InsumoId");
+
+                    b.ToTable("MovimientosInventario", (string)null);
+                });
+
             modelBuilder.Entity("LavaMoto365.Domain.Entities.OrdenDeCompra", b =>
                 {
                     b.Property<int>("Id")
@@ -127,6 +203,17 @@ namespace LavaMoto365.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LavaMoto365.Domain.Entities.MovimientoInventario", b =>
+                {
+                    b.HasOne("LavaMoto365.Domain.Entities.Insumo", "Insumo")
+                        .WithMany("Movimientos")
+                        .HasForeignKey("InsumoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Insumo");
+                });
+
             modelBuilder.Entity("LavaMoto365.Domain.Entities.OrdenDeCompra", b =>
                 {
                     b.HasOne("LavaMoto365.Domain.Entities.Proveedor", "Proveedor")
@@ -136,6 +223,11 @@ namespace LavaMoto365.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Proveedor");
+                });
+
+            modelBuilder.Entity("LavaMoto365.Domain.Entities.Insumo", b =>
+                {
+                    b.Navigation("Movimientos");
                 });
 
             modelBuilder.Entity("LavaMoto365.Domain.Entities.OrdenDeCompra", b =>

@@ -18,6 +18,9 @@ public class LavaMotoDbContext : DbContext
 
     // --- Daniel: agregar aquí su DbSet<Insumo> ---
 
+    public DbSet<Insumo> Insumos => Set<Insumo>();
+    public DbSet<MovimientoInventario> Movimientos => Set<MovimientoInventario>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(LavaMotoDbContext).Assembly);
 }

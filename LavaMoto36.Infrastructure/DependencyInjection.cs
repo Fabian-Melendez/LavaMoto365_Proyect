@@ -19,6 +19,8 @@ public static class DependencyInjection
         services.AddScoped<OrdenCompraService>();
 
         // --- Daniel: services.AddScoped<InventarioService>(); ---
+        services.AddScoped<InventarioService>();
+        
         return services;
     }
 }
